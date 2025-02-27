@@ -30,7 +30,7 @@ Mô tả: PCB layout 2 lớp (1 lớp bottom và 1 lớp top) đã sắp xếp l
 
 ### 3. Project
 
-- Link project:
+- Link project: https://github.com/Tu-hai-long-vuong/D22-NguyenDucCanh/tree/main/250228/PCB_DO_AN_MACH_DIEN_TU
 
 ---
 
