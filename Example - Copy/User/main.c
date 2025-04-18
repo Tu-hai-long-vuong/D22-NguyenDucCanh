@@ -1,3 +1,14 @@
+/*
+============ BAI TAP LON KY THUAT VI XU LY =============
+
+************STM32 + LCD 4-BIT + MQ2 + BUZZER************
+		Date:	16/04/2025
+		
+		Created By Nguyen Duc Canh ft Hoang Tuan Anh
+
+********************************************************
+*/
+
 #include "stm32f10x.h"
 #include <stdio.h>
 #include <math.h>
@@ -10,9 +21,9 @@
 #define LCD_D6      GPIO_Pin_10
 #define LCD_D7      GPIO_Pin_11
 
-#define V_REF       5.0f        // Ði?n áp tham chi?u (5V)
-#define RL_VALUE    10000.0f    // Giá tr? di?n tr? t?i: 10k Ohm
-#define R0_VALUE    10000.0f    // Giá tr? R0 hi?u chu?n: 10k Ohm (ví d?)
+#define V_REF       5.0f        // Voltage (5V)
+#define RL_VALUE    10000.0f    // Rt: 10k Ohm
+#define R0_VALUE    10000.0f    // Varaible Resistor
 
 static __IO uint32_t usTicks;
 
@@ -49,8 +60,7 @@ void GPIO_Config(void) {
     // C?u hình chân cho LCD RS, RW, EN (PB13-PB15)
     gpio.GPIO_Pin = LCD_RS | LCD_RW | LCD_EN;
     GPIO_Init(GPIOB, &gpio);
-    
-    // (Buzzer s? s? d?ng PA1, c?u hình ? PWM_Buzzer_Init)
+
 }
 
 // ========================= ADC Config =========================
@@ -58,15 +68,15 @@ void ADC_Config(void) {
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
     
     ADC_InitTypeDef adc;
-    adc.ADC_Mode = ADC_Mode_Independent;
-    adc.ADC_ScanConvMode = DISABLE;
-    adc.ADC_ContinuousConvMode = ENABLE;
-    adc.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;
-    adc.ADC_DataAlign = ADC_DataAlign_Right;
-    adc.ADC_NbrOfChannel = 1;
+    adc.ADC_Mode 															= ADC_Mode_Independent;
+    adc.ADC_ScanConvMode 											= DISABLE;
+    adc.ADC_ContinuousConvMode 								= ENABLE;
+    adc.ADC_ExternalTrigConv 									= ADC_ExternalTrigConv_None;
+    adc.ADC_DataAlign 												= ADC_DataAlign_Right;
+    adc.ADC_NbrOfChannel 											= 1;
     ADC_Init(ADC1, &adc);
     
-    // C?u hình kênh ADC cho c?m bi?n MQ2 (PA0)
+    // Cau hinh kenh ADC cho cam bien MQ2
     ADC_RegularChannelConfig(ADC1, ADC_Channel_0, 1, ADC_SampleTime_55Cycles5);
     ADC_Cmd(ADC1, ENABLE);
     
@@ -148,7 +158,7 @@ void LCD_Init(void) {
 
 // ========================= PWM Buzzer Functions using TIM2 (Channel 2 on PA1) =========================
 void PWM_Buzzer_Init(void) {
-    // B?t clock cho GPIOA và TIM2
+    // Bat clock cho TIMER2 và GPIOA 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
     
@@ -160,25 +170,21 @@ void PWM_Buzzer_Init(void) {
 }
 
 void Buzzer_SetFrequency(uint16_t freq) {
-    // C?u hình TIM2 d? t?o PWM trên kênh 2 t?i t?n s? mong mu?n (Hz)
-    // Gi? s? h? th?ng s? d?ng: APB1 clock cho TIM2 là 72MHz (v?i prescaler logic)
-    // Ta d?t prescaler d? timer ch?y 100kHz: prescaler = 720 - 1 (72MHz/720 = 100kHz)
-    uint16_t prescaler = 720 - 1;
-    // T?n s? PWM = 100kHz / (Period+1), nên Period = (100000/freq) - 1
-    uint16_t period = (100000 / freq) - 1;
+    uint16_t prescaler 									= 720 - 1;
+    uint16_t period 										= (100000 / freq) - 1;
     
     TIM_TimeBaseInitTypeDef tim;
-    tim.TIM_Prescaler = prescaler;
-    tim.TIM_Period = period;
-    tim.TIM_CounterMode = TIM_CounterMode_Up;
-    tim.TIM_ClockDivision = TIM_CKD_DIV1;
+    tim.TIM_Prescaler 									= prescaler;
+    tim.TIM_Period 											= period;
+    tim.TIM_CounterMode 								= TIM_CounterMode_Up;
+    tim.TIM_ClockDivision 							= TIM_CKD_DIV1;
     TIM_TimeBaseInit(TIM2, &tim);
     
     TIM_OCInitTypeDef oc;
-    oc.TIM_OCMode = TIM_OCMode_PWM1;
-    oc.TIM_OutputState = TIM_OutputState_Enable;
-    oc.TIM_Pulse = period / 2;  // 50% duty cycle
-    oc.TIM_OCPolarity = TIM_OCPolarity_High;
+    oc.TIM_OCMode 											= TIM_OCMode_PWM1;
+    oc.TIM_OutputState 									= TIM_OutputState_Enable;
+    oc.TIM_Pulse 												= period / 2;  // 50% duty cycle
+    oc.TIM_OCPolarity 									= TIM_OCPolarity_High;
     TIM_OC2Init(TIM2, &oc);
     TIM_OC2PreloadConfig(TIM2, TIM_OCPreload_Enable);
     
@@ -218,22 +224,22 @@ int main(void) {
     PWM_Buzzer_Init();
     
     while (1) {
-        adc_value = Read_Gas_Value();
-        voltage = ADC_to_Voltage(adc_value);
-        RS = Calculate_RS(voltage);
-        ppm = Calculate_PPM(RS);
+        adc_value 						= Read_Gas_Value();
+        voltage 							= ADC_to_Voltage(adc_value);
+        RS 										= Calculate_RS(voltage);
+        ppm 									= Calculate_PPM(RS);
         
-        if (ppm > 200) {  // Ngu?ng cao: b?t buzzer ? t?n s? 1500Hz
+        if (ppm > 200) {  // High
             LCD_Clear();
             LCD_Gotoxy(0, 0);
             LCD_Puts("GAS DETECTED!");
-            // Buzzer kêu ? 1500Hz
+            // Buzzer sound at 1500Hz 
             Buzzer_SetFrequency(1500);
             LCD_Gotoxy(0, 1);
             sprintf(str, "Gas: %.2f ppm", ppm);
             LCD_Puts(str);
         }
-        else if (ppm > 100) {  // Ngu?ng trung bình: t?t buzzer
+        else if (ppm > 100) {  // Average 
             Buzzer_Stop();
             LCD_Clear();
             LCD_Gotoxy(0, 0);
@@ -242,7 +248,7 @@ int main(void) {
             sprintf(str, "Gas: %.2f ppm", ppm);
             LCD_Puts(str);
         }
-        else {
+        else { // LOW
             Buzzer_Stop();
             LCD_Clear();
             LCD_Gotoxy(0, 0);
